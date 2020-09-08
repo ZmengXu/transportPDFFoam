@@ -61,9 +61,7 @@ Foam::mcSlipBoundary::mcSlipBoundary
 void Foam::mcSlipBoundary::hitPatch
 (
     mcParticle& p,
-//- 2020.09.05@Zmeng
-    mcParticle::trackingData& td,
-//    mcParticle::trackData& td,
+    mcParticle::trackData& td,
     const label patchI,
     const scalar trackFraction,
     const tetIndices& tetIs

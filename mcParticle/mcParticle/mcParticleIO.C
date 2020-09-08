@@ -31,16 +31,12 @@ License
 
 Foam::mcParticle::mcParticle
 (
-//- 2020.09.05@Zmeng
-    const polyMesh& mesh,
-//    const Cloud<mcParticle>& cloud,
+    const Cloud<mcParticle>& cloud,
     Istream& is,
     bool readFields
 )
 :
-//- 2020.09.05@Zmeng
-    newParticle(mesh, is, readFields),
-//    particle(cloud.pMesh(), is, readFields),
+    particle(cloud.pMesh(), is, readFields),
     reflectionBoundaryVelocity_(vector::zero),
     reflected_(false),
     reflectedAtOpenBoundary_(false)

@@ -96,9 +96,7 @@ bool Foam::IOLostParticles<ParticleType>::writeData(Ostream& os) const
 template<class ParticleType>
 void Foam::IOLostParticles<ParticleType>::readData()
 {
-//- 2020.09.05@Zmeng
-    Istream& is = readStream("", true);
-//    Istream& is = readStream("");
+    Istream& is = readStream("");
 
     token firstToken(is);
 

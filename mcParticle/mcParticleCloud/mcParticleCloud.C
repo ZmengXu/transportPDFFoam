@@ -127,9 +127,7 @@ void sendToOrigProc(Foam::mcParticleCloud& c)
         }
 
         // Allocate transfer buffers
-//- 2020.09.05@Zmeng
-        PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
-//        PstreamBuffers pBufs(Pstream::nonBlocking);
+        PstreamBuffers pBufs(Pstream::nonBlocking);
 
         // Stream into send buffers
         forAll(transferList, i)
@@ -528,10 +526,8 @@ Foam::mcParticleCloud::mcParticleCloud
             mesh,
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
-        )
-//- 2020.09.05@Zmeng
-//,
-//        0
+        ),
+        0
     ),
     massIn_
     (
@@ -543,10 +539,8 @@ Foam::mcParticleCloud::mcParticleCloud
             mesh,
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
-        )
-//- 2020.09.05@Zmeng
-//,
-//        0
+        ),
+        0
     ),
     massOut_
     (
@@ -558,10 +552,8 @@ Foam::mcParticleCloud::mcParticleCloud
             mesh,
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
-        )
-//- 2020.09.05@Zmeng
-//,
-//        0
+        ),
+        0
     ),
     cumDeltaMass_
     (
@@ -573,10 +565,8 @@ Foam::mcParticleCloud::mcParticleCloud
             mesh,
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
-        )
-//- 2020.09.05@Zmeng
-//,
-//        0
+        ),
+        0
     ),
     cumMassIn_
     (
@@ -588,10 +578,8 @@ Foam::mcParticleCloud::mcParticleCloud
             mesh,
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
-        )
-//- 2020.09.05@Zmeng
-//,
-//        0
+        ),
+        0
     ),
     cumMassOut_
     (
@@ -603,10 +591,8 @@ Foam::mcParticleCloud::mcParticleCloud
             mesh,
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
-        )
-//- 2020.09.05@Zmeng
-//,
-//        0
+        ),
+        0
     )
 {
     bound(kcPdf_, solutionDict_.kMin());
@@ -1151,9 +1137,7 @@ void Foam::mcParticleCloud::cloneParticles(label celli)
         // Half my mass
         p.m() /= 2.0;
         // create a new particle like myself
-//- 2020.09.05@Zmeng
-        autoPtr<newParticle> ptrNew = p.clone();
-//        autoPtr<particle> ptrNew = p.clone();
+        autoPtr<particle> ptrNew = p.clone();
 
         ptrNew().position() = positions[particleI];
 
@@ -1298,11 +1282,9 @@ Foam::scalar Foam::mcParticleCloud::evolve()
         p.faceOld() = p.face();
         p.procOld() = Pstream::myProcNo();
     }
-//- 2020.09.05@Zmeng
-    mcParticle::trackingData td1(*this, deltaT_.value()/2.);
-    Cloud<mcParticle>::move(*this, td1, deltaT_.value()/2.);
-//    mcParticle::trackData td1(*this, deltaT_.value()/2.);
-//    Cloud<mcParticle>::move(td1, deltaT_.value()/2.);
+
+    mcParticle::trackData td1(*this, deltaT_.value()/2.);
+    Cloud<mcParticle>::move(td1, deltaT_.value()/2.);
 
     // Evaluate models at deltaT/2
     forAllIter(mcParticleCloud, *this, pIter)
@@ -1325,10 +1307,10 @@ Foam::scalar Foam::mcParticleCloud::evolve()
     forAllIter(mcParticleCloud, *this, pIter)
     {
         mcParticle& p = pIter();
+
         p.position() = p.positionOld();
-//- 2020.09.05@Zmeng IMPORTANT
-//       p.cell() = p.cellOld();
-//       p.face() = p.faceOld();
+        p.cell() = p.cellOld();
+        p.face() = p.faceOld();
 
         if (p.reflected())
         {
@@ -1347,13 +1329,9 @@ Foam::scalar Foam::mcParticleCloud::evolve()
         p.Utracking() +=
             vector
             (
-//- 2020.09.05@Zmeng
-                C*random_.scalarNormal(),
-                C*random_.scalarNormal(),
-                C*random_.scalarNormal()
-//                C*random_.GaussNormal(),
-//                C*random_.GaussNormal(),
-//                C*random_.GaussNormal()
+                C*random_.GaussNormal(),
+                C*random_.GaussNormal(),
+                C*random_.GaussNormal()
             );
 
         // Add correction velocity
@@ -1364,11 +1342,10 @@ Foam::scalar Foam::mcParticleCloud::evolve()
 
     // Second half-step
     //////////////////
-//- 2020.09.05@Zmeng
-    mcParticle::trackingData td2(*this, deltaT_.value());
-    Cloud<mcParticle>::move(*this, td2, deltaT_.value());
-//    mcParticle::trackData td2(*this, deltaT_.value());
-//    Cloud<mcParticle>::move(td2, deltaT_.value());
+
+    mcParticle::trackData td2(*this, deltaT_.value());
+
+    Cloud<mcParticle>::move(td2, deltaT_.value());
 
     // Correct boundary conditions
     scalarField massInInst(massIn_.size(), 0.);
@@ -1556,10 +1533,7 @@ Foam::scalar Foam::mcParticleCloud::evolve()
         true,
         false
     );
-//- 2020.09.05@Zmeng
-//Explain: solverPerformance is typedef SolverPerformance<scalar> solverPerformance;
-    Residuals<scalar>::append(mesh_, pndSp);
-//    mesh_.setSolverPerformance(pndSp);
+    mesh_.setSolverPerformance(pndSp);
 
     return rhoRes;
 }
@@ -1625,13 +1599,9 @@ void Foam::mcParticleCloud::particleGenInCell
         // How to enforce the component-wise correlations < u_i, u_j >?
         // TODO generate correlated fluctuations
         vector u(
-//- 2020.09.05@Zmeng
-            random().scalarNormal() * uscales.x(),
-            random().scalarNormal() * uscales.y(),
-            random().scalarNormal() * uscales.z()
-//            random().GaussNormal() * uscales.x(),
-//            random().GaussNormal() * uscales.y(),
-//            random().GaussNormal() * uscales.z()
+            random().GaussNormal() * uscales.x(),
+            random().GaussNormal() * uscales.y(),
+            random().GaussNormal() * uscales.z()
             );
         vector UParticle = u + Updf;
 
@@ -2114,9 +2084,7 @@ Foam::mcParticleCloud::randomPointsInCell(label n, label celli)
     for (label i=0; i<n;)
     {
         // Relative coordinate [0, 1] in this cell
-//- 2020.09.05@Zmeng
-        vector xi = random().sample01<vector>();
-//        vector xi = random().vector01();
+        vector xi = random().vector01();
         // Random offset from min point
         scalar rx = min(max(10.0*SMALL, xi.x()), 1.0-10.0*SMALL);
         scalar ry = min(max(10.0*SMALL, xi.y()), 1.0-10.0*SMALL);

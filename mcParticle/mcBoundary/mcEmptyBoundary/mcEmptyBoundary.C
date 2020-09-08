@@ -61,18 +61,14 @@ Foam::mcEmptyBoundary::mcEmptyBoundary
 void Foam::mcEmptyBoundary::hitPatch
 (
     mcParticle& p,
-//- 2020.09.05@Zmeng
-    mcParticle::trackingData& td,
-//    mcParticle::trackData& td,
+    mcParticle::trackData& td,
     const label patchI,
     const scalar trackFraction,
     const tetIndices& tetIs
 )
 {
     FatalErrorIn("mcEmptyBoundary::hitPatch"
-//- 2020.09.05@Zmeng
-        "(mcParticle&, mcParticle::trackingData&, const label, const scalar, "
-//        "(mcParticle&, mcParticle::trackData&, const label, const scalar, "
+        "(mcParticle&, mcParticle::trackData&, const label, const scalar, "
         "const tetIndices&)")
         << "A mcParticle must never hit an empty boundary!" << endl
         << Foam::exit(FatalError);

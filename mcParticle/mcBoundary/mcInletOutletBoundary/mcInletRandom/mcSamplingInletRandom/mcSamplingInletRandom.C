@@ -47,9 +47,7 @@ void fillBuf
     scalar m = -VGREAT;
     forAll(tmp, i)
     {
-//- 2020.09.05@Zmeng
-        tmp[i] = rnd.scalarNormal()*uRms + UMean;
-//        tmp[i] = rnd.GaussNormal()*uRms + UMean;
+        tmp[i] = rnd.GaussNormal()*uRms + UMean;
         m = max(m, fabs(tmp[i]));
     }
     forAll(tmp, i)

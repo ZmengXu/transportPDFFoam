@@ -1,5 +1,3 @@
-newParticle/newParticle.C
-newParticle/newParticleIO.C
 mcSolution/mcSolution.C
 mcParticle/mcParticle.C
 mcParticle/mcParticleIO.C

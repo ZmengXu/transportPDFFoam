@@ -33,9 +33,7 @@ Foam::tetFacePointCellDecomposition<Tetrahedron>
 ::tetFacePointCellDecomposition(const polyMesh& pMesh)
 :
     pMesh_(pMesh),
-//- 2020.09.05@Zmeng
-    tets_(move(decompose(pMesh_)())),
-//    tets_(decompose(pMesh_)().xfer()),
+    tets_(decompose(pMesh_)().xfer()),
     cellTets_(pMesh.cells().size()),
     tetFace_(tets_.size()),
     tetPoints_(tets_.size())

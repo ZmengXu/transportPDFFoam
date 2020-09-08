@@ -42,9 +42,7 @@ using namespace Foam;
 
 //- Interpolation index and weight
 template<class L>
-//- 2020.09.05@Zmeng
-inline void findCoeffs(const L& lst, scalar v, label& i, scalar& w)
-//inline void findCoeffs(const L& lst, scalar v, int& i, scalar& w)
+inline void findCoeffs(const L& lst, scalar v, int& i, scalar& w)
 {
     typename L::const_iterator iter =
         std::lower_bound(lst.cbegin(), lst.cend(), v);

@@ -42,7 +42,7 @@ Author
 #ifndef mcParticle_H
 #define mcParticle_H
 
-#include "newParticle.H"
+#include "particle.H"
 #include "IOstream.H"
 #include "autoPtr.H"
 #include "contiguous.H"
@@ -60,11 +60,11 @@ class mcParticleCloud;
 
 class mcParticle
 :
-    public newParticle
+    public particle
 {
     // Private types
 
-        typedef newParticle base;
+        typedef particle base;
 
         struct BoundaryOfDataMembers {} beginOfDataMembers_;
 
@@ -151,25 +151,18 @@ public:
     friend class Cloud<mcParticle>;
 
     //- Class used to pass tracking data to the trackToFace function
-//- 2020.09.05@Zmeng
-    class trackingData
-    :
-        public newParticle::trackingData
+    class trackData:
+        public particle::TrackingData<mcParticleCloud>
     {
-        typedef newParticle::trackingData base;
-//    class trackData:
-//        public particle::TrackingData<mcParticleCloud>
-//    {
-//        typedef particle::TrackingData<mcParticleCloud> base;
+        typedef particle::TrackingData<mcParticleCloud> base;
         //- The cloud
         mcParticleCloud& cloud_;
 
     public:
 
         // Constructors
-//- 2020.09.05@Zmeng
-        trackingData(mcParticleCloud& mcpc, scalar trackTime);
-//        trackData(mcParticleCloud& mcpc, scalar trackTime);
+
+        trackData(mcParticleCloud& mcpc, scalar trackTime);
 
         // Access
 
@@ -198,23 +191,16 @@ public:
         //- Construct from Istream
         mcParticle
         (
-//- 2020.09.05@Zmeng
-            const polyMesh& mesh,
-//            const Cloud<mcParticle>& c,
+            const Cloud<mcParticle>& c,
             Istream& is,
             bool readFields = true
         );
 
         //- Construct and return a clone
-//- 2020.09.05@Zmeng
-        autoPtr<newParticle> clone() const
+        autoPtr<particle> clone() const
         {
-            return autoPtr<newParticle>(new mcParticle(*this));
+            return autoPtr<particle>(new mcParticle(*this));
         }
-//        autoPtr<particle> clone() const
-//        {
-//            return autoPtr<particle>(new mcParticle(*this));
-//        }
 
 
         //- Factory class to read-construct particles used for
@@ -379,9 +365,7 @@ public:
         // Tracking
 
             //- Move
-//- 2020.09.05@Zmeng
-            bool move(mcParticleCloud&, trackingData& td, const scalar trackTime);
-//            bool move(trackData& td, const scalar trackTime);
+            bool move(trackData& td, const scalar trackTime);
 
         // Patch interactions
 
@@ -390,26 +374,17 @@ public:
             bool hitPatch
             (
                 const polyPatch&  patch,
-//- 2020.09.05@Zmeng
-                trackingData&        td,
-                //trackData&        td,
+                trackData&        td,
                 const label       patchI,
                 const scalar      trackFraction,
                 const tetIndices& tetIs
             );
 
-            //- Overridable function to handle the particle hitting a patch
-            //  Executed before other patch-hitting functions
-//- 2020.09.05@Zmeng
-            bool hitPatch(mcParticleCloud& cloud, trackingData& td);
-
             //- Overridable function to handle the particle hitting a polyPatch
             void hitPatch
             (
                 const polyPatch&,
-//- 2020.09.05@Zmeng
-                trackingData& td
-//                trackData& td
+                trackData& td
             )
             {}
 

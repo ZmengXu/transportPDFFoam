@@ -234,11 +234,8 @@ Foam::vector Foam::mcInletOutletBoundary::randomVelocity(label faceI)
     vector Up = vector
     (
         getInRnd()[faceI].value(),
-//- 2020.09.05@Zmeng
-        U.y() + sqrt(R.yy()) * rnd.scalarNormal(),
-        U.z() + sqrt(R.zz()) * rnd.scalarNormal()
-//        U.y() + sqrt(R.yy()) * rnd.GaussNormal(),
-//        U.z() + sqrt(R.zz()) * rnd.GaussNormal()
+        U.y() + sqrt(R.yy()) * rnd.GaussNormal(),
+        U.z() + sqrt(R.zz()) * rnd.GaussNormal()
     );
     // Return Up in global coordinate system
     return transform(revTrans_[faceI], Up);

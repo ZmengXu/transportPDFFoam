@@ -37,9 +37,8 @@ namespace Foam
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-//- 2020.09.05@Zmeng
-Foam::mcParticle::trackingData::trackingData(mcParticleCloud& mcpc, scalar trackTime)
-//Foam::mcParticle::trackData::trackData(mcParticleCloud& mcpc, scalar trackTime)
+
+Foam::mcParticle::trackData::trackData(mcParticleCloud& mcpc, scalar trackTime)
 :
     base(mcpc),
     cloud_(mcpc)
@@ -81,9 +80,8 @@ Foam::mcParticle::mcParticle
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-//- 2020.09.05@Zmeng
-bool Foam::mcParticle::move(mcParticleCloud& cloud, mcParticle::trackingData& td, const scalar trackTime)
-//bool Foam::mcParticle::move(mcParticle::trackData& td, const scalar trackTime)
+
+bool Foam::mcParticle::move(mcParticle::trackData& td, const scalar trackTime)
 {
 
     td.switchProcessor = false;
@@ -97,50 +95,13 @@ bool Foam::mcParticle::move(mcParticleCloud& cloud, mcParticle::trackingData& td
     }
 
     const polyMesh& mesh = mcpc.pMesh();
-//- 2020.09.05@Zmeng
-//    const polyBoundaryMesh& pbMesh = mesh.boundaryMesh();
+    const polyBoundaryMesh& pbMesh = mesh.boundaryMesh();
 
     scalar tEnd = (1.0 - stepFraction())*trackTime;
-//- 2020.09.05@Zmeng
-//    scalar dtMax = tEnd;
+    scalar dtMax = tEnd;
 
     isOnInletBoundary_ = false;
 
-//- 2020.09.05@Zmeng IMPORTANT
-
-    while (td.keepParticle && !td.switchProcessor && stepFraction() < 1)
-    {
-        if (debug)
-        {
-            Pout<< "Time = " << mesh.time().timeName()
-                << "  trackTime = " << trackTime
-                << "  tEnd = " << tEnd
-                << "  stepFraction() = " << stepFraction()
-                << "  origId() = " << origId()
-                << "  position() = " << position();
-        }
-
-        const scalar f = 1 - stepFraction();
-        trackToAndHitFace(f*trackTime*Utracking_, f, cloud, td);
-
-        ++nSteps_;
-
-        // if we made too many very small steps, drop the particle
-        if (nSteps_ > 1000)
-        {
-#ifdef FULLDEBUG
-            Perr<< "DEBUG: particle " << origId_ << " made more than 1000 "
-                   "steps, droping it. Info:\n"
-                << info() << nl;
-#endif
-            mcpc.notifyLostParticle(*this);
-            td.keepParticle = false;
-            break;
-        };
-    }
-
-//////////////////////////////////////////////////
-/*
     while (td.keepParticle && !td.switchProcessor && tEnd > 0)
     {
         if (debug)
@@ -191,23 +152,15 @@ bool Foam::mcParticle::move(mcParticleCloud& cloud, mcParticle::trackingData& td
             }
         }
     }
-*/
     return td.keepParticle;
 }
 
-//- 2020.09.05@Zmeng
-bool Foam::mcParticle::hitPatch(mcParticleCloud&, trackingData&)
-{
-    return false;
-}
 
 // Pre-action before hitting patches
 bool Foam::mcParticle::hitPatch
 (
     const polyPatch&           patch,
-//- 2020.09.05@Zmeng
-    mcParticle::trackingData&     td,
-//    mcParticle::trackData&     td,
+    mcParticle::trackData&     td,
     const label                patchI,
     const scalar               trackFraction,
     const tetIndices&          tetIs
@@ -216,10 +169,7 @@ bool Foam::mcParticle::hitPatch
     if (isA<wedgePolyPatch>(patch))
     {
         const polyMesh& mesh = td.cloud().pMesh();
-//- 2020.09.05@Zmeng IMPORTANT
-        vector tmpPosition = position();
-        meshTools::constrainDirection(mesh, mesh.geometricD(), tmpPosition);
-//        meshTools::constrainDirection(mesh, mesh.geometricD(), position());
+        meshTools::constrainDirection(mesh, mesh.geometricD(), position());
     }
     else
     {

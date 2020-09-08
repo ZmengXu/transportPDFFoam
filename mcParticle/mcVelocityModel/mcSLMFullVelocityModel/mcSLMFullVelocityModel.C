@@ -167,13 +167,9 @@ void Foam::mcSLMFullVelocityModel::correct(mcParticle& p)
     const vector xi =
         vector
         (
-//- 2020.09.05@Zmeng
-            cloud().random().scalarNormal(),
-            cloud().random().scalarNormal(),
-            cloud().random().scalarNormal()
-//            cloud().random().GaussNormal(),
-//            cloud().random().GaussNormal(),
-//            cloud().random().GaussNormal()
+            cloud().random().GaussNormal(),
+            cloud().random().GaussNormal(),
+            cloud().random().GaussNormal()
         );
 
     const scalar A = -(0.5*C1_ + 0.75*C0_)*p.Omega();

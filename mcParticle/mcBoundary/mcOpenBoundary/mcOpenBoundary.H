@@ -123,13 +123,24 @@ public:
         virtual void hitPatch
         (
             mcParticle& p,
-//- 2020.09.05@Zmeng
-            mcParticle::trackingData& td,
-//            mcParticle::trackData& td,
+#if FOAM_HEX_VERSION < 0x200
+            mcParticle::trackData& td
+#else
+            mcParticle::trackData& td,
             const label patchI,
             const scalar trackFraction,
             const tetIndices& tetIs
+#endif
         );
+
+#if FOAM_HEX_VERSION < 0x200
+        //- Deal with a particle hitting the patch without trackDat
+        virtual void hitPatch
+        (
+            mcParticle& p,
+            int&
+        );
+#endif
 
 };
 
