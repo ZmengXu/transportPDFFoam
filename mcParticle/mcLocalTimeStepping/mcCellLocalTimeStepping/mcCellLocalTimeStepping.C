@@ -26,9 +26,7 @@ License
 #include "mcCellLocalTimeStepping.H"
 
 #include "addToRunTimeSelectionTable.H"
-//- 2020.09.04@Zmeng
-#include "turbulentFluidThermoModel.H"//#include "RASModel.H"//#include "turbulenceModel.H"
-//#include "compressible/RAS/RASModel/RASModel.H"
+#include "compressible/RAS/RASModel/RASModel.H"
 #include "fvCFD.H"
 #include "interpolation.H"
 #include "mcParticleCloud.H"
@@ -88,16 +86,18 @@ void Foam::mcCellLocalTimeStepping::updateInternals()
     const fvMesh& mesh = eta_.mesh();
     scalar deltaT = cloud().deltaT().value();
     const volVectorField& U = cloud().Ufv();
-//- 2020.09.04@Zmeng IMPORTANT
-    const compressibleTurbulenceModel& tm = cloud().turbulenceModel();
-//    const compressible::turbulenceModel& tm = cloud().turbulenceModel();
+    const compressible::turbulenceModel& tm = cloud().turbulenceModel();
     tmp<volSymmTensorField> tR = tm.R();
     const symmTensorField& RInt = tR().internalField();
     const surfaceVectorField& CourantCoeffs = cloud().CourantCoeffs();
     scalar k0 = SMALL;
     if (isA<compressible::RASModel>(tm))
     {
+#if FOAM_HEX_VERSION < 0x200
+        k0 = refCast<const compressible::RASModel>(tm).k0().value();
+#else
         k0 = refCast<const compressible::RASModel>(tm).kMin().value();
+#endif
     }
 
     // Use clipping in case there are negative entries in R due to divergence
@@ -148,9 +148,7 @@ void Foam::mcCellLocalTimeStepping::updateInternals()
         eta_[cellI] = dtc/deltaT;
     }
     // scale eta field
-//- 2020.09.04@Zmeng
-    scalarField& etaInt = eta_.primitiveFieldRef();
-//    scalarField& etaInt = eta_.internalField();
+    scalarField& etaInt = eta_.internalField();
     scalar etaMin = gMin(etaInt);
     etaInt -= etaMin;
     etaInt = (etaMax-1)/gMax(etaInt)*etaInt + 1;

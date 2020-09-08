@@ -151,8 +151,11 @@ mcEllipticRelaxationPositionCorrection
 
 void Foam::mcEllipticRelaxationPositionCorrection::readCoeffs()
 {
+#if FOAM_HEX_VERSION < 0x200
+    using mathematicalConstant::pi;
+#else
     using constant::mathematical::pi;
-
+#endif
     dimensionedScalar kf
     (
         "kf",

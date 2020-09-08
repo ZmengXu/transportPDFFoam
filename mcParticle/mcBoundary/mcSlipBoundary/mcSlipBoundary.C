@@ -61,10 +61,14 @@ Foam::mcSlipBoundary::mcSlipBoundary
 void Foam::mcSlipBoundary::hitPatch
 (
     mcParticle& p,
+#if FOAM_HEX_VERSION < 0x200
+    mcParticle::trackData& td
+#else
     mcParticle::trackData& td,
     const label patchI,
     const scalar trackFraction,
     const tetIndices& tetIs
+#endif
 )
 {
     const polyPatch& pp = patch().patch();
@@ -73,5 +77,15 @@ void Foam::mcSlipBoundary::hitPatch
     p.transformProperties(I - 2.0*nw*nw);
     p.reflected() = true;
 }
+
+
+#if FOAM_HEX_VERSION < 0x200
+void Foam::mcSlipBoundary::hitPatch
+(
+    Foam::mcParticle& p,
+    int&
+)
+{}
+#endif
 
 // ************************************************************************* //

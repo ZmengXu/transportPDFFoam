@@ -92,9 +92,7 @@ Foam::mcMuradogluPositionCorrection::mcMuradogluPositionCorrection
 void Foam::mcMuradogluPositionCorrection::updateInternals()
 {
     readCoeffs();
-//- 2020.09.04@Zmeng
-    U0_.value() = gMax(mag(cloud().Ufv().primitiveField()));
-//    U0_.value() = gMax(mag(cloud().Ufv().internalField()));
+    U0_.value() = gMax(mag(cloud().Ufv().internalField()));
     if (U0_.value() < VSMALL)
     {
         WarningIn("mcMuradogluPositionCorrection::updateInternals()")

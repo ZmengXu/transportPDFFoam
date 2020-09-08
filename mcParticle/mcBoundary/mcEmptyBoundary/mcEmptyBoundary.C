@@ -58,6 +58,35 @@ Foam::mcEmptyBoundary::mcEmptyBoundary
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+#if FOAM_HEX_VERSION < 0x200
+
+void Foam::mcEmptyBoundary::hitPatch
+(
+    mcParticle& p,
+    mcParticle::trackData& td
+)
+{
+    FatalErrorIn("mcEmptyBoundary::hitPatch"
+        "(mcParticle&, mcParticle::trackData&)")
+        << "A mcParticle must never hit an empty boundary!" << endl
+        << Foam::exit(FatalError);
+}
+
+
+void Foam::mcEmptyBoundary::hitPatch
+(
+    mcParticle& p,
+    int&
+)
+{
+    FatalErrorIn("mcEmptyBoundary::hitPatch"
+        "(mcParticle&, int&)")
+        << "A mcParticle must never hit an empty boundary!" << endl
+        << Foam::exit(FatalError);
+}
+
+#else
+
 void Foam::mcEmptyBoundary::hitPatch
 (
     mcParticle& p,
@@ -73,5 +102,7 @@ void Foam::mcEmptyBoundary::hitPatch
         << "A mcParticle must never hit an empty boundary!" << endl
         << Foam::exit(FatalError);
 }
+
+#endif
 
 // ************************************************************************* //

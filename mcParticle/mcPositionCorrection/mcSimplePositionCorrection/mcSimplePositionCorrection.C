@@ -138,13 +138,9 @@ void Foam::mcSimplePositionCorrection::updateInternals()
         dimless,
         solutionDict().lookupOrDefault<scalar>("C", 1e-2)
     );
-//- 2020.09.04@Zmeng
-    const scalarField& pndInt = cloud().pndcPdf().internalField();
-    const scalarField& rhoInt = cloud().rhocPdf().internalField();
-    phi_.primitiveFieldRef() = pndInt/rhoInt - 1.;
-//    const scalarField& pndInt = cloud().pndcPdf().dimensionedInternalField();
-//    const scalarField& rhoInt = cloud().rhocPdf().dimensionedInternalField();
-//    phi_.internalField() = pndInt/rhoInt - 1.;
+    const scalarField& pndInt = cloud().pndcPdf().dimensionedInternalField();
+    const scalarField& rhoInt = cloud().rhocPdf().dimensionedInternalField();
+    phi_.internalField() = pndInt/rhoInt - 1.;
     phi_.correctBoundaryConditions();
 
     // TODO try gradInterpolationConstantTet

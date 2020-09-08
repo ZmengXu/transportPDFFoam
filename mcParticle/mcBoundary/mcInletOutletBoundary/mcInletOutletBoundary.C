@@ -32,9 +32,7 @@ License
 #include "fvsPatchField.H"
 #include "Random.H"
 #include "transformField.H"
-//- 2020.09.04@Zmeng
-#include "turbulentFluidThermoModel.H"//#include "RASModel.H"//#include "turbulenceModel.H"
-//#include "compressible/RAS/RASModel/RASModel.H"
+#include "compressible/RAS/RASModel/RASModel.H"
 #include "DynamicList.H"
 #include <algorithm>
 
@@ -124,31 +122,20 @@ const Foam::symmTensorField& Foam::mcInletOutletBoundary::getR()
         const symmTensorField& tau =
             cloud().TaucPdf().boundaryField()[patchID()];
         // clipping to compensate for bad divergence errors
-//- 2020.09.04@Zmeng IMPORTANT
-        const compressibleTurbulenceModel& tm = cloud().turbulenceModel();
-        scalar k0;
-        if (isA<compressible::RASModel>(tm))
-        {
-            k0 = refCast<const compressible::RASModel>(tm).kMin().value();
-        }
-        else
-        {
-            Info << "2020.09.04@Zmeng IMPORTANT in mcInletOutletBoundary.C" << endl;
-            k0 = SMALL;
-        }
-
-/*
         const compressible::turbulenceModel& tm = cloud().turbulenceModel();
         scalar k0;
         if (isA<compressible::RASModel>(tm))
         {
+#if FOAM_HEX_VERSION < 0x200
+            k0 = refCast<const compressible::RASModel>(tm).k0().value();
+#else
             k0 = refCast<const compressible::RASModel>(tm).kMin().value();
+#endif
         }
         else
         {
             k0 = SMALL;
         }
-*/
         R_ = max
         (
             transform(fwdTrans_, tau),
@@ -270,9 +257,7 @@ void Foam::mcInletOutletBoundary::correct(bool afterMove)
     List<scalarField*> PhicPdf(cloud().PhicPdf().size());
     forAll(PhicPdf, PhiI)
     {
-//- 2020.09.04@Zmeng
-        PhicPdf[PhiI] = &cloud().PhicPdf()[PhiI]->boundaryFieldRef()[patchID()];
-//        PhicPdf[PhiI] = &cloud().PhicPdf()[PhiI]->boundaryField()[patchID()];
+        PhicPdf[PhiI] = &cloud().PhicPdf()[PhiI]->boundaryField()[patchID()];
     }
     scalar dt = cloud().deltaT().value();
     const label Npc = cloud().solutionDict().particlesPerCell();

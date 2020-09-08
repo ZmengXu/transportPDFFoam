@@ -64,8 +64,13 @@ Foam::autoPtr<Foam::mcPositionCorrection> Foam::mcPositionCorrection::New
     word sd = posCorrType + "PositionCorrectionCoeffs";
 
     // If set to "false", "no", "n", "off" or "none", disable
+#if FOAM_HEX_VERSION < 0x200
+    Switch::switchType enablePosCorr = Switch::asEnum(posCorrType, true);
+    if (enablePosCorr != Switch::INVALID && !Switch::asBool(enablePosCorr))
+#else
     Switch enablePosCorr = Switch(posCorrType, true);
     if (enablePosCorr.valid() && !bool(enablePosCorr))
+#endif
     {
         return autoPtr<mcPositionCorrection>
         (
@@ -97,8 +102,11 @@ Foam::autoPtr<Foam::mcPositionCorrection> Foam::mcPositionCorrection::New
 
 void Foam::mcPositionCorrection::makeL()
 {
+#if FOAM_HEX_VERSION < 0x200
+    using mathematicalConstant::pi;
+#else
     using constant::mathematical::pi;
-
+#endif
     const fvMesh& mesh = cloud().mesh();
     if (L_.valid())
     {
@@ -156,9 +164,7 @@ void Foam::mcPositionCorrection::makeL()
     }
     forAll(L_().boundaryField(), patchI)
     {
-//- 2020.09.04@Zmeng
-        L_().boundaryFieldRef()[patchI] =
-//        L_().boundaryField()[patchI] =
+        L_().boundaryField()[patchI] =
             2./(invdx.boundaryField()[patchI]*pi);
     }
 }

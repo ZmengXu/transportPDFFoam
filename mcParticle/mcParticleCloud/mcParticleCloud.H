@@ -82,10 +82,7 @@ Author
 #include "Random.H"
 #include "labelIOField.H"
 #include "SortableList.H"
-//- 2020.09.04@Zmeng
-#include "turbulenceModel.H"
-#include "compressibleTurbulenceModel.H"
-//#include "compressible/turbulenceModel/turbulenceModel.H"
+#include "compressible/turbulenceModel/turbulenceModel.H"
 #include "surfaceMesh.H"
 #include "fvsPatchField.H"
 #include "IOLostParticles.H"
@@ -156,9 +153,7 @@ class mcParticleCloud:
         //- The global particle time step
         dimensionedScalar deltaT_;
         //- The RAS model object
-        //- 2020.09.04@Zmeng
-        const compressibleTurbulenceModel& turbModel_;
-//        const compressible::turbulenceModel& turbModel_;
+        const compressible::turbulenceModel& turbModel_;
 
         //- The FV velocity field
         const volVectorField& Ufv_;
@@ -320,9 +315,7 @@ public:
             const fvMesh& mesh,
             const dictionary& dict,
             const word& cloudName = "defaultCloud",
-            //- 2020.09.04@Zmeng
-            const compressibleTurbulenceModel* turbModel = 0,
-            //const compressible::turbulenceModel* turbModel = 0,
+            const compressible::turbulenceModel* turbModel = 0,
             const volVectorField* U = 0,
             const volScalarField* p = 0,
             volScalarField* rho = 0
@@ -350,9 +343,7 @@ public:
         inline virtual bool readIfModified();
 
         //- Access the turbulence model
-        //- 2020.09.04@Zmeng
-        inline const compressibleTurbulenceModel& turbulenceModel() const;
-        //inline const compressible::turbulenceModel& turbulenceModel() const;
+        inline const compressible::turbulenceModel& turbulenceModel() const;
 
         //- The FV velocity field
         inline const volVectorField& Ufv() const;
@@ -429,9 +420,13 @@ public:
         (
             mcParticle&       p,
             TrackData&        td,
+#if FOAM_HEX_VERSION < 0x200
+            const label       patchI
+#else
             const label       patchI,
             const scalar      trackFraction,
             const tetIndices& tetIs
+#endif
         );
 
         //- Report info about name and total number of particles in cloud

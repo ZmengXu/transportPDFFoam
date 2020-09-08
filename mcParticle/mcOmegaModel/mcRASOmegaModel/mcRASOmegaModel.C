@@ -26,12 +26,8 @@ License
 #include "mcRASOmegaModel.H"
 
 #include "addToRunTimeSelectionTable.H"
-//- 2020.09.04@Zmeng
-#include "turbulenceModel.H"
-#include "compressibleTurbulenceModel.H"
-#include "RASModel.H"
-//#include "compressible/turbulenceModel/turbulenceModel.H"
-//#include "compressible/RAS/kOmegaSST/kOmegaSST.H"
+#include "compressible/turbulenceModel/turbulenceModel.H"
+#include "compressible/RAS/kOmegaSST/kOmegaSST.H"
 #include "interpolation.H"
 #include "mcParticleCloud.H"
 
@@ -93,9 +89,6 @@ Foam::mcRASOmegaModel::mcRASOmegaModel
 
 void Foam::mcRASOmegaModel::updateInternals()
 {
-//- 2020.09.04@Zmeng IMPORTANT
-    const compressibleTurbulenceModel& turbModel = cloud().turbulenceModel();
-/*
     const compressible::turbulenceModel& turbModel = cloud().turbulenceModel();
     if (isA<compressible::RASModels::kOmegaSST>(turbModel))
     {
@@ -108,8 +101,7 @@ void Foam::mcRASOmegaModel::updateInternals()
         );
     }
     else
-*/
-//    {
+    {
         // Otherwise compute Omega from epsilon/k
         Omega_.reset
         (
@@ -119,7 +111,7 @@ void Foam::mcRASOmegaModel::updateInternals()
                 turbModel.epsilon()/turbModel.k()
             )
         );
-//    }
+    }
     Omega0_.readIfPresent(solutionDict());
     boundMax(Omega_(), Omega0_);
     OmegaInterp_ = interpolation<scalar>::New

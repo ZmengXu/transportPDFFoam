@@ -109,9 +109,7 @@ void Foam::mcSLMFullVelocityModel::updateInternals()
 
     p_ = pfv_ - 2./3.*cloud().rhocPdf()*cloud().kfv();
 
-//- 2020.09.04@Zmeng
-    diffU_.primitiveFieldRef() = (cloud().Ufv() - Updf)/solDict.relaxationTime("U");
-//    diffU_.internalField() = (cloud().Ufv() - Updf)/solDict.relaxationTime("U");
+    diffU_.internalField() = (cloud().Ufv() - Updf)/solDict.relaxationTime("U");
     diffU_.correctBoundaryConditions();
 
     diffk_ = (sqrt(cloud().kfv()/cloud().kcPdf()) - 1.0)

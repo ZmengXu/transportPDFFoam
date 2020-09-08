@@ -75,9 +75,7 @@ Foam::mcLimitedSimplePositionCorrection::mcLimitedSimplePositionCorrection
     // Set fixedValue boundaries of UPosCorr to vector::zero
     forAll(UPosCorr_.boundaryField(), patchi)
     {
-//- 2020.09.04@Zmeng
-        fvPatchField<vector>& fpf = UPosCorr_.boundaryFieldRef()[patchi];
-//        fvPatchField<vector>& fpf = UPosCorr_.boundaryField()[patchi];
+        fvPatchField<vector>& fpf = UPosCorr_.boundaryField()[patchi];
         if (isA<fixedValueFvPatchVectorField>(fpf))
         {
             fpf.vectorField::operator=(vector::zero);
@@ -120,9 +118,7 @@ void Foam::mcLimitedSimplePositionCorrection::updateInternals()
         0.*one,
         zeroGradientFvPatchField<scalar>::typeName
     );
-//- 2020.09.04@Zmeng
-    phi.primitiveFieldRef() =
-//    phi.internalField() =
+    phi.internalField() =
         one*(cloud().pndcPdf() - cloud().rhocPdf())/cloud().rhocPdf();
     phi.correctBoundaryConditions();
 

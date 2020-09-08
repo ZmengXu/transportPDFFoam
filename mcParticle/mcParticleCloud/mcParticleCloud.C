@@ -29,11 +29,8 @@ License
 #include "fixedValueFvPatchField.H"
 #include "boundBox.H"
 #include "fvc.H"
-//- 2020.09.04@Zmeng
-#include "bound.H"
-#include "turbulenceModel.H"
-//#include "compressible/RAS/RASModel/RASModel.H"
-//#include "compressible/LES/LESModel/LESModel.H"
+#include "compressible/RAS/RASModel/RASModel.H"
+#include "compressible/LES/LESModel/LESModel.H"
 #include "mcProcessorBoundary.H"
 #include "gradInterpolationConstantTet.H"
 #include "timeVaryingMappedFixedValueFvPatchField.H"
@@ -43,19 +40,12 @@ License
 
 namespace // anonymous
 {
-//- 2020.09.04@Zmeng
-const Foam::compressibleTurbulenceModel* getTurbulenceModel
-//const Foam::compressible::turbulenceModel* getTurbulenceModel
+
+const Foam::compressible::turbulenceModel* getTurbulenceModel
 (
     const Foam::objectRegistry& obr
 )
 {
-//- 2020.09.04@Zmeng
-    if (obr.foundObject<Foam::compressibleTurbulenceModel>(Foam::compressibleTurbulenceModel::propertiesName))
-    {
-        return &obr.lookupObject<Foam::compressibleTurbulenceModel>(Foam::compressibleTurbulenceModel::propertiesName);
-    }
-/*
     if (obr.foundObject<Foam::compressible::turbulenceModel>("RASProperties"))
     {
         return &obr.lookupObject<Foam::compressible::RASModel>
@@ -70,9 +60,11 @@ const Foam::compressibleTurbulenceModel* getTurbulenceModel
             "LESProperties"
         );
     }
-*/
     else
     {
+#if FOAM_HEX_VERSION < 0x200
+        Foam::
+#endif
         FatalErrorIn("getTurbulenceModel(const Foam::objectRegistry&)")
             << "No valid model for TKE calculation."
             << Foam::exit(Foam::FatalError);
@@ -125,7 +117,52 @@ void sendToOrigProc(Foam::mcParticleCloud& c)
                 transferList[p.procOld()].append(c.remove(&p));
             }
         }
+#if FOAM_HEX_VERSION < 0x200
+        // List of the numbers of particles to be transfered across the
+        // processor patches
+        labelList nsTransPs(transferList.size());
 
+        forAll(transferList, i)
+        {
+            nsTransPs[i] = transferList[i].size();
+        }
+
+        // List of the numbers of particles to be transfered across the
+        // processor patches for all the processors
+        labelListList allNTrans(Pstream::nProcs());
+        allNTrans[Pstream::myProcNo()] = nsTransPs;
+        combineReduce(allNTrans, combineNsTransPs());
+
+        forAll(transferList, i)
+        {
+            if (transferList[i].size())
+            {
+                OPstream particleStream(Pstream::blocking, i);
+                particleStream << transferList[i];
+            }
+        }
+
+        forAll(allNTrans, i)
+        {
+            label nRecPs = allNTrans[i][Pstream::myProcNo()];
+
+            if (nRecPs)
+            {
+                IPstream particleStream(Pstream::blocking, i);
+                IDLList<mcParticle> newParticles
+                (
+                    particleStream,
+                    mcParticle::iNew(c)
+                );
+
+                forAllIter(IDLList<mcParticle>, newParticles, newpIter)
+                {
+                    mcParticle& newp = newpIter();
+                    c.addParticle(newParticles.remove(&newp));
+                }
+            }
+        }
+#else
         // Allocate transfer buffers
         PstreamBuffers pBufs(Pstream::nonBlocking);
 
@@ -141,9 +178,7 @@ void sendToOrigProc(Foam::mcParticleCloud& c)
 
         // Set up transfers when in non-blocking mode. Returns sizes (in bytes)
         // to be sent/received.
-//- 2020.09.04@Zmeng IMPORTANT
-        labelList allNTrans(Pstream::nProcs());
-//        labelListList allNTrans(Pstream::nProcs());
+        labelListList allNTrans(Pstream::nProcs());
 
         pBufs.finishedSends(allNTrans);
 
@@ -152,24 +187,15 @@ void sendToOrigProc(Foam::mcParticleCloud& c)
 
         forAll(allNTrans, i)
         {
-//- 2020.09.04@Zmeng
-            if (allNTrans[i])
+            forAll(allNTrans[i], j)
             {
-                transfered = true;
-                break;
+                if (allNTrans[i][j])
+                {
+                    transfered = true;
+                    break;
+                }
             }
         }
-        reduce(transfered, orOp<bool>());
-
-//            forAll(allNTrans[i], j)
-//            {
-//                if (allNTrans[i][j])
-//                {
-//                    transfered = true;
-//                    break;
-//                }
-//            }
-//        }
 
         if (!transfered)
         {
@@ -178,17 +204,9 @@ void sendToOrigProc(Foam::mcParticleCloud& c)
         #endif
 
         // Retrieve from receive buffers
-//- 2020.09.04@Zmeng
-        // Which processors this processor is connected to
-        const globalMeshData& pData = c.mesh().globalData();
-        const labelList& neighbourProcs = pData[Pstream::myProcNo()];
-        forAll(neighbourProcs, i)
+        forAll(allNTrans, i)
         {
-            label neighbProci = neighbourProcs[i];
-            label nRec = allNTrans[neighbProci];
-//        forAll(allNTrans, i)
-//        {
-//            label nRec = allNTrans[i][Pstream::myProcNo()];
+            label nRec = allNTrans[i][Pstream::myProcNo()];
 
             if (nRec)
             {
@@ -208,6 +226,7 @@ void sendToOrigProc(Foam::mcParticleCloud& c)
                 }
             }
         }
+#endif
     }
 }
 
@@ -248,7 +267,12 @@ const Foam::dimensionedScalar SMALL_VOLUME
 
 namespace Foam
 {
+
+#if FOAM_HEX_VERSION < 0x200
+    defineParticleTypeNameAndDebug(mcParticle, 0);
+#endif
     defineTemplateTypeNameAndDebug(Cloud<mcParticle>, 0);
+
 }  // namespace Foam
 
 
@@ -279,9 +303,7 @@ Foam::mcParticleCloud::mcParticleCloud
     const fvMesh& mesh,
     const dictionary& dict,
     const word& cloudName,
-//- 2020.09.04@Zmeng
-    const compressibleTurbulenceModel* turbModel,
-//    const compressible::turbulenceModel* turbModel,
+    const compressible::turbulenceModel* turbModel,
     const volVectorField* U,
     const volScalarField* p,
     volScalarField* rho
@@ -489,9 +511,7 @@ Foam::mcParticleCloud::mcParticleCloud
         ),
         mesh_,
         dimVelocity*dimVelocity,
-//- 2020.09.04@Zmeng
-        0.5*tr(TaucPdf_.ref()),
-//        0.5*tr(TaucPdf_.dimensionedInternalField()),
+        0.5*tr(TaucPdf_.dimensionedInternalField()),
         // Use the boundary conditions for k (FV)
         kfv()().boundaryField()
     ),
@@ -613,9 +633,7 @@ Foam::mcParticleCloud::mcParticleCloud
                 TaucPdf_.boundaryField()[i];
             if (isA<tvmpf>(patch))
             {
-                //- 2020.09.04@Zmeng
-                TaucPdf_.boundaryFieldRef().set
-                //TaucPdf_.boundaryField().set
+                TaucPdf_.boundaryField().set
                 (
                     i,
                     new fixedValueFvPatchField<symmTensor>
@@ -628,9 +646,7 @@ Foam::mcParticleCloud::mcParticleCloud
     }
 
     // Correct the Courant coefficients in the boundary field
-//- 2020.09.04@Zmeng
-    CourantCoeffs_.boundaryFieldRef() /= 2.;
-//    CourantCoeffs_.boundaryField() /= 2.;
+    CourantCoeffs_.boundaryField() /= 2.;
 
     initScalarFields();
 
@@ -659,9 +675,7 @@ Foam::mcParticleCloud::mcParticleCloud
                     axis_ = wpp.axis();
                     centrePlaneNormal_ = wpp.centreNormal();
                     openingAngle_ =
-                    //- 2020.09.04@Zmeng
-                        2.*acos(wpp.n()&centrePlaneNormal_);
-                    //    2.*acos(wpp.patchNormal()&centrePlaneNormal_);
+                        2.*acos(wpp.patchNormal()&centrePlaneNormal_);
                     area_.reset(new DimensionedField<scalar, volMesh>
                         (
                             IOobject
@@ -693,9 +707,7 @@ Foam::mcParticleCloud::mcParticleCloud
                 "    const fvMesh&,"
                 "    const dictionary&,"
                 "    const word&,"
-                //- 2020.09.04@Zmeng
-                "    const compressibleTurbulenceModel*,"
-                //"    const compressible::turbulenceModel*,"
+                "    const compressible::turbulenceModel*,"
                 "    const volVectorField*,"
                 "    volScalarField*"
                 ")"
@@ -796,11 +808,8 @@ void Foam::mcParticleCloud::checkMoments()
         Info<< "Moments read correctly." << endl;
         if (isAxiSymmetric_)
         {
-//- 2020.09.04@Zmeng
-            pndcPdf_.primitiveFieldRef() *= mesh_.V()/volumeOrArea();
-            pndcPdfInst_.primitiveFieldRef() *= mesh_.V()/volumeOrArea();
-//            pndcPdf_.internalField() *= mesh_.V()/volumeOrArea();
-//            pndcPdfInst_.internalField() *= mesh_.V()/volumeOrArea();
+            pndcPdf_.internalField() *= mesh_.V()/volumeOrArea();
+            pndcPdfInst_.internalField() *= mesh_.V()/volumeOrArea();
         }
     }
     else
@@ -950,77 +959,51 @@ void Foam::mcParticleCloud::updateCloudPDF(scalar existWt)
     // Do time-averaging of moments and compute mean fields
     mMom_  = existWt * mMom_  + newWt * mMomInstant;
     DimensionedField<scalar, volMesh> mMomBounded = max(mMom_, SMALL_MASS);
-//- 2020.09.04@Zmeng
-    pndcPdfInst_.primitiveFieldRef() = mMomInstant/volumeOrArea();
-//    pndcPdfInst_.internalField() = mMomInstant/volumeOrArea();
+    pndcPdfInst_.internalField() = mMomInstant/volumeOrArea();
     pndcPdfInst_.correctBoundaryConditions();
-
-//- 2020.09.04@Zmeng
-    pndcPdf_.primitiveFieldRef() = mMom_/volumeOrArea();
-//    pndcPdf_.internalField() = mMom_/volumeOrArea();
+    pndcPdf_.internalField() = mMom_/volumeOrArea();
     pndcPdf_.correctBoundaryConditions();
 
     VMom_  = existWt * VMom_  + newWt * VMomInstant;
     DimensionedField<scalar, volMesh> VMomBounded = max(VMom_, SMALL_VOLUME);
-
-//- 2020.09.04@Zmeng
-    rhocPdfInst_.primitiveFieldRef() = mMomInstant/max(VMomInstant, SMALL_VOLUME);
-//    rhocPdfInst_.internalField() = mMomInstant/max(VMomInstant, SMALL_VOLUME);
+    rhocPdfInst_.internalField() = mMomInstant/max(VMomInstant, SMALL_VOLUME);
     rhocPdfInst_.correctBoundaryConditions();
-//- 2020.09.04@Zmeng
-    rhocPdf_.primitiveFieldRef()   = mMom_ / VMomBounded;
-//    rhocPdf_.internalField()   = mMom_ / VMomBounded;
+    rhocPdf_.internalField()   = mMom_ / VMomBounded;
     rhocPdf_.correctBoundaryConditions();
 
     UMom_  = existWt * UMom_  + newWt * UMomInstant;
-//- 2020.09.04@Zmeng
-    UcPdf_.primitiveFieldRef()   = UMom_ / mMomBounded;
-//    UcPdf_.internalField()   = UMom_ / mMomBounded;
+    UcPdf_.internalField()   = UMom_ / mMomBounded;
     UcPdf_.correctBoundaryConditions();
 
     PhiPhiI = 0;
     forAll(PhicPdf_, PhiI)
     {
         PhiMom_[PhiI] = existWt * PhiMom_[PhiI] + newWt * PhiMomInstant[PhiI];
-
-//- 2020.09.04@Zmeng
-        PhicPdf_[PhiI]->primitiveFieldRef() = PhiMom_[PhiI] / mMomBounded;
-//        PhicPdf_[PhiI]->internalField() = PhiMom_[PhiI] / mMomBounded;
+        PhicPdf_[PhiI]->internalField() = PhiMom_[PhiI] / mMomBounded;
         PhicPdf_[PhiI]->correctBoundaryConditions();
         for (label PhiJ = PhiI; PhiJ != PhicPdf_.size(); ++PhiJ, ++PhiPhiI)
         {
             PhiPhiMom_[PhiPhiI] =
                 existWt*PhiPhiMom_[PhiPhiI] + newWt*PhiPhiMomInstant[PhiPhiI];
-//- 2020.09.04@Zmeng
-            PhiPhicPdf_[PhiPhiI]->primitiveFieldRef() =
-//            PhiPhicPdf_[PhiPhiI]->internalField() =
+            PhiPhicPdf_[PhiPhiI]->internalField() =
                 PhiPhiMom_[PhiPhiI]/mMomBounded
               - (
-//- 2020.09.04@Zmeng
-                    PhicPdf_[PhiI]->ref()
-                   *PhicPdf_[PhiJ]->ref()
-//                    PhicPdf_[PhiI]->dimensionedInternalField()
-//                   *PhicPdf_[PhiJ]->dimensionedInternalField()
+                    PhicPdf_[PhiI]->dimensionedInternalField()
+                   *PhicPdf_[PhiJ]->dimensionedInternalField()
                 );
             PhiPhicPdf_[PhiPhiI]->correctBoundaryConditions();
         }
     }
 
     UUMom_ = existWt*UUMom_ + newWt*UUMomInstant;
-//- 2020.09.04@Zmeng
-    TaucPdf_.primitiveFieldRef() =
-//    TaucPdf_.internalField() =
+    TaucPdf_.internalField() =
         (
             UUMom_/mMomBounded
-//- 2020.09.04@Zmeng
-          - symm(UcPdf_*UcPdf_).ref().ref()
-//          - symm(UcPdf_*UcPdf_)().dimensionedInternalField()
+          - symm(UcPdf_*UcPdf_)().dimensionedInternalField()
         );
     TaucPdf_.correctBoundaryConditions();
 
-//- 2020.09.04@Zmeng
-    kcPdf_.primitiveFieldRef()   = 0.5 * tr(TaucPdf_.primitiveFieldRef());
-//    kcPdf_.internalField()   = 0.5 * tr(TaucPdf_.internalField());
+    kcPdf_.internalField()   = 0.5 * tr(TaucPdf_.internalField());
     kcPdf_.correctBoundaryConditions();
     bound(kcPdf_, solutionDict_.kMin());
 }
@@ -1137,8 +1120,11 @@ void Foam::mcParticleCloud::cloneParticles(label celli)
         // Half my mass
         p.m() /= 2.0;
         // create a new particle like myself
+#if FOAM_HEX_VERSION < 0x200
+        autoPtr<mcParticle> ptrNew = p.clone();
+#else
         autoPtr<particle> ptrNew = p.clone();
-
+#endif
         ptrNew().position() = positions[particleI];
 
         addParticle(static_cast<mcParticle*>(ptrNew.ptr()));
@@ -1284,7 +1270,11 @@ Foam::scalar Foam::mcParticleCloud::evolve()
     }
 
     mcParticle::trackData td1(*this, deltaT_.value()/2.);
+#if FOAM_HEX_VERSION < 0x200
+    Cloud<mcParticle>::move(td1);
+#else
     Cloud<mcParticle>::move(td1, deltaT_.value()/2.);
+#endif
 
     // Evaluate models at deltaT/2
     forAllIter(mcParticleCloud, *this, pIter)
@@ -1344,8 +1334,11 @@ Foam::scalar Foam::mcParticleCloud::evolve()
     //////////////////
 
     mcParticle::trackData td2(*this, deltaT_.value());
-
+#if FOAM_HEX_VERSION < 0x200
+    Cloud<mcParticle>::move(td2);
+#else
     Cloud<mcParticle>::move(td2, deltaT_.value());
+#endif
 
     // Correct boundary conditions
     scalarField massInInst(massIn_.size(), 0.);
@@ -1367,9 +1360,7 @@ Foam::scalar Foam::mcParticleCloud::evolve()
 
     // Redistribute lost mass and reset lost mass counter
     // FIXME Doing this after the extraction is probably suboptimal
-//- 2020.09.04@Zmeng
-    lostMass_ = lostMass_ / max(PaNIC_.primitiveFieldRef(), 1.);
-//    lostMass_ = lostMass_ / max(PaNIC_.internalField(), 1.);
+    lostMass_ = lostMass_ / max(PaNIC_.internalField(), 1.);
     forAllIter(mcParticleCloud, *this, pIter)
     {
         mcParticle& p = pIter();
@@ -1520,6 +1511,7 @@ Foam::scalar Foam::mcParticleCloud::evolve()
     // Finally, update deltaT for next time step
     deltaT_.value() = solutionDict_.CFL()/CoMax;
 
+#if FOAM_HEX_VERSION >= 0x200
 //- 2020.09.04@Zmeng
 //    lduMatrix::solverPerformance
     solverPerformance
@@ -1534,6 +1526,7 @@ Foam::scalar Foam::mcParticleCloud::evolve()
         false
     );
     mesh_.setSolverPerformance(pndSp);
+#endif
 
     return rhoRes;
 }
@@ -1642,20 +1635,14 @@ void Foam::mcParticleCloud::particleGenInCell
 void Foam::mcParticleCloud::initMoments()
 {
     mMom_  = rhocPdf_*volumeOrArea();
-//- 2020.09.04@Zmeng
-    rhocPdfInst_.primitiveFieldRef() = rhocPdf_.internalField();
-    pndcPdf_.primitiveFieldRef() = rhocPdf_.internalField();
-    pndcPdfInst_.primitiveFieldRef() = rhocPdf_.internalField();
-//    rhocPdfInst_.internalField() = rhocPdf_.internalField();
-//    pndcPdf_.internalField() = rhocPdf_.internalField();
-//    pndcPdfInst_.internalField() = rhocPdf_.internalField();
+    rhocPdfInst_.internalField() = rhocPdf_.internalField();
+    pndcPdf_.internalField() = rhocPdf_.internalField();
+    pndcPdfInst_.internalField() = rhocPdf_.internalField();
 
     VMom_  = mMom_ / rhocPdf_;
 
     UMom_  = mMom_ * Ufv_;
-//- 2020.09.04@Zmeng
-    UcPdf_.primitiveFieldRef()   = Ufv_.internalField();
-//    UcPdf_.internalField()   = Ufv_.internalField();
+    UcPdf_.internalField()   = Ufv_.internalField();
     UcPdf_.correctBoundaryConditions();
 
     label PhiPhiI = 0;
@@ -1667,17 +1654,11 @@ void Foam::mcParticleCloud::initMoments()
             PhiPhiMom_[PhiPhiI] =
                 mMom_
                *(
-//- 2020.09.04@Zmeng
-                   PhiPhicPdf_[PhiPhiI]->ref()
+                   PhiPhicPdf_[PhiPhiI]->dimensionedInternalField()
                  + (
-                       PhicPdf_[PhiI]->ref()
-                      *PhicPdf_[PhiJ]->ref()
+                       PhicPdf_[PhiI]->dimensionedInternalField()
+                      *PhicPdf_[PhiJ]->dimensionedInternalField()
                    )
-//                   PhiPhicPdf_[PhiPhiI]->dimensionedInternalField()
-//                 + (
-//                       PhicPdf_[PhiI]->dimensionedInternalField()
-//                      *PhicPdf_[PhiJ]->dimensionedInternalField()
-//                   )
                 );
         }
     }
@@ -1686,14 +1667,10 @@ void Foam::mcParticleCloud::initMoments()
         mMom_
        *(
            turbulenceModel().R()()
-//- 2020.09.04@Zmeng
-         + symm(UcPdf_*UcPdf_).ref().ref()
-//         + symm(UcPdf_*UcPdf_)().dimensionedInternalField()
+         + symm(UcPdf_*UcPdf_)().dimensionedInternalField()
         );
 
-//- 2020.09.04@Zmeng
-    kcPdf_.primitiveFieldRef()   = turbulenceModel().k()().internalField();
-//    kcPdf_.internalField()   = turbulenceModel().k()().internalField();
+    kcPdf_.internalField()   = turbulenceModel().k()().internalField();
     kcPdf_.correctBoundaryConditions();
     const surfaceScalarField& phi =
         mesh().lookupObject<surfaceScalarField>
