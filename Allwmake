@@ -1,0 +1,12 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # run from this directory
+set -x
+set -e
+
+wmake libso mcParticle
+wmake pdfSimpleFoam
+
+if [ "$1" = doc ]
+then
+    doc/Allwmake
+fi
